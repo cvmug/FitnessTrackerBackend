@@ -5,7 +5,9 @@ const client = require("./client");
 // user functions
 async function createUser({ username, password }) {
   const { rows: [user] } = await client.query(
-    `INSERT INTO users (username, password) VALUES ($1, $2) RETURNING *`,
+    `INSERT INTO users (username, password) 
+    VALUES ($1, $2) 
+    RETURNING id, username`,
     [username, password]
   );
 
@@ -13,21 +15,23 @@ async function createUser({ username, password }) {
 }
 
 async function getUser({ username, password }) {
-  const { rows: [user] } = await client.query(
-    `SELECT * FROM users WHERE username = $1 AND password = $2`,
+  const result = await client.query(
+    `SELECT id, username
+    FROM users
+    WHERE username = $1 AND password = $2`,
     [username, password]
   );
-
-  return user;
+  return result.rows[0];
 }
 
 async function getUserById(userId) {
-  const { rows: [user] } = await client.query(
-    `SELECT * FROM users WHERE id = $1`,
+  const result = await client.query(
+    `SELECT id, username
+    FROM users
+    WHERE id = $1`,
     [userId]
   );
-
-  return user;
+  return result.rows[0];
 }
 
 async function getUserByUsername(username) {
