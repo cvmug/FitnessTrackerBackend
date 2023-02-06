@@ -10,7 +10,6 @@ async function createUser({ username, password }) {
     RETURNING id, username`,
     [username, password]
   );
-
   return user;
 }
 

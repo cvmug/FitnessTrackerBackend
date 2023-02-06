@@ -9,8 +9,20 @@ async function dropTables() {
   console.log("Dropping All Tables...")
   // drop all tables, in the correct order
   try {
-    await client.query(`DROP TABLE IF EXISTS workouts`);
-    console.log("Dropped table: workouts");
+    await client.query(`DROP TABLE IF EXISTS routine_activities`);
+    console.log("Dropped table: routine_activities");
+  } catch (error) {
+    console.error(error);
+  }
+  try {
+    await client.query(`DROP TABLE IF EXISTS routines`);
+    console.log("Dropped table: routines");
+  } catch (error) {
+    console.error(error);
+  }
+  try {
+    await client.query(`DROP TABLE IF EXISTS activities`);
+    console.log("Dropped table: activities");
   } catch (error) {
     console.error(error);
   }
@@ -27,27 +39,54 @@ async function createTables() {
   // create all tables, in the correct order
   try {
     await client.query(`
-      CREATE TABLE users (
-        id SERIAL PRIMARY KEY,
-        username TEXT NOT NULL UNIQUE,
-        password TEXT NOT NULL
+    CREATE TABLE routine_activities (
+      id SERIAL PRIMARY KEY,
+      "routineId" INTEGER REFERENCES routines (id),
+      "activityId" INTEGER REFERENCES activities (id),
+      duration INTEGER,
+      count INTEGER,
+      UNIQUE ("routineId", "activityId")
       );
     `);
-    console.log("Created table: users");
+    console.log("Created table: routine_activities");
   } catch (error) {
     console.error(error);
   }
   try {
     await client.query(`
-      CREATE TABLE workouts (
-        id SERIAL PRIMARY KEY,
-        name TEXT NOT NULL,
-        user_id INTEGER REFERENCES users(id),
-        duration INTEGER NOT NULL,
-        date DATE NOT NULL
-      );
+    CREATE TABLE routines (
+      id SERIAL PRIMARY KEY,
+      creatorId INTEGER REFERENCES users(id),
+      isPublic BOOLEAN DEFAULT false,
+      name VARCHAR(255) UNIQUE NOT NULL,
+      goal TEXT NOT NULL
+    );
     `);
-    console.log("Created table: workouts");
+    console.log("Created table: routines");
+  } catch (error) {
+    console.error(error);
+  }
+  try {
+    await client.query(`
+    CREATE TABLE activities (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) UNIQUE NOT NULL,
+      description TEXT NOT NULL
+    );
+    `);
+    console.log("Created table: activities");
+  } catch (error) {
+    console.error(error);
+  }
+  try {
+    await client.query(`
+    CREATE TABLE users (
+      id SERIAL PRIMARY KEY,
+      username VARCHAR(255) UNIQUE NOT NULL,
+      password VARCHAR(255) NOT NULL
+    );
+    `);
+    console.log("Created table: users");
   } catch (error) {
     console.error(error);
   }

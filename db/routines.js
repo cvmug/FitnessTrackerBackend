@@ -1,3 +1,4 @@
+const { attachActivitiesToRoutines } = require("./activities");
 const client = require("./client");
 
 async function createRoutine({ creatorId, isPublic, name, goal }) {}
@@ -6,7 +7,17 @@ async function getRoutineById(id) {}
 
 async function getRoutinesWithoutActivities() {}
 
-async function getAllRoutines() {}
+
+//for each routune in routines array, have an activities array containing activities
+
+async function getAllRoutines() {
+  const { rows : routines } = await client.query(`
+  SELECT users.username AS "creatorName, routines.* FROM routines
+  JOIN users ON routine."creatorId" = users.id;
+  `)
+
+  return await attachActivitiesToRoutines(routines)
+}
 
 async function getAllPublicRoutines() {}
 
