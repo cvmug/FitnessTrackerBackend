@@ -3,7 +3,8 @@ const router = express.Router();
 
 // GET /api/health
 router.get('/health', async (req, res, next) => {
-});
+    res.status(200).send({ message: 'Server is healthy' });
+  });  
 
 // ROUTER: /api/users
 const usersRouter = require('./users');

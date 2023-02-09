@@ -49,8 +49,8 @@ async function getActivityByName(name) {
 
 async function attachActivitiesToRoutines(routines) {
   const RoutinesWithActivities = [...routines]
-  const routineIds = routines.map(routine => routine.id).join(", ")
-
+  const routineIdString = routines.map((routine, index) => `$${index +1}`).join(", ")
+  const routineIds = routines.map(routine => routine.id)
   //get activities related to any of the routines passed in
   const { rows: activities } = await client.query(`
   SELECT activities.*, routine_activities.duration, 
@@ -58,7 +58,7 @@ async function attachActivitiesToRoutines(routines) {
   routine_activities.id AS "routineActivityId"
   FROM activities
   JOIN routine_activities ON activities.id = routine_activities."activityId"
-  WHERE routine_activities."routineId" IN (${routineIds})
+  WHERE routine_activities."routineId" IN (${routineIdString})
   `, routineIds)
   // Attach activities to routines
   activities.forEach(activity => {
@@ -70,7 +70,6 @@ async function attachActivitiesToRoutines(routines) {
       routine.activities.push(activity)
     }
   })
-
   return RoutinesWithActivities
 }
 
