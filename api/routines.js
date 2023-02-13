@@ -1,75 +1,75 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 
 const {
-    getAllPublicRoutines,
-    createRoutine,
-    getUserById,
-    getRoutineById,
-    updateRoutine,
-    destroyRoutine,
-    addActivityToRoutine,
-    getRoutineActivitiesByRoutine,
-} = require('../db');
+  getAllPublicRoutines,
+  createRoutine,
+  getUserById,
+  getRoutineById,
+  updateRoutine,
+  destroyRoutine,
+  addActivityToRoutine,
+  getRoutineActivitiesByRoutine,
+} = require("../db");
 
 // GET /api/routines
-router.get('/', async (req, res, next) => {
-    try {
-        const pubRoutines = await getAllPublicRoutines();
-        res.send(pubRoutines)
-    } catch (error) {
-        next(error)
-    }
-})
+router.get("/", async (req, res, next) => {
+  try {
+    const pubRoutines = await getAllPublicRoutines();
+    res.send(pubRoutines);
+  } catch (error) {
+    next(error);
+  }
+});
 
 // POST /api/routines
 router.post("/", async (req, res, next) => {
-    const user = req.user;
-    if (!user) {
-        return next({
-            error: 'UnauthorizedError',
-            name: 'UnauthorizedError',
-            message: 'You must be logged in to perform this action'
-        });
-    }
-    const routineFields = req.body;
-    const routineDetails = {creatorId: user.id, ...routineFields};
-    try {
-        const newRoutine = await createRoutine(routineDetails);
-        res.send(newRoutine);
-    } catch (error) {
-        next(error);
-    }
-})
+  const user = req.user;
+  if (!user) {
+    return next({
+      name: "UnauthorizedError",
+      message: "You must be logged in to perform this action",
+      error: "UnauthorizedError"
+    });
+  }
+  const routineFields = req.body;
+  const routineDetails = { creatorId: user.id, ...routineFields };
+  try {
+    const newRoutine = await createRoutine(routineDetails);
+    res.send(newRoutine);
+  } catch (error) {
+    next(error);
+  }
+});
 
 // PATCH /api/routines/:routineId
 router.patch("/:routineId", async (req, res, next) => {
-    const { isPublic, name, goal } = req.body;
-    const user = req.user;
+  const { isPublic, name, goal } = req.body;
+  const user = req.user;
 
-    if (!user) {
-        return next({
-            error: 'UnauthorizedError',
-            name: 'UnauthorizedError',
-            message: 'You must be logged in to perform this action'
-        });
-    }
-    const id = user.id;
-    const routineToBeUpdated = req.params.routineId;
-    const beforeUpdate = await getRoutineById(routineToBeUpdated);
-    const creatorId = beforeUpdate.creatorId;
+  if (!user) {
+    return next({
+      name: "UnauthorizedError",
+      message: "You must be logged in to perform this action",
+      error: "UnauthorizedError",
+    });
+  }
+  const id = user.id;
+  const routineToBeUpdated = req.params.routineId;
+  const beforeUpdate = await getRoutineById(routineToBeUpdated);
+  const creatorId = beforeUpdate.creatorId;
 
-    if (id === creatorId) {
-        const updatedRoutine = await updateRoutine({ id, isPublic, name, goal });
-        return res.send(updatedRoutine);
-    } else {
-        res.status(403);
-        return next({
-            error: 'UnauthorizedError',
-            name: 'UnauthorizedError',
-            message: `User ${user.username} is not allowed to update ${beforeUpdate.name}`
-        });
-    }
+  if (id === creatorId) {
+    const updatedRoutine = await updateRoutine({ id, isPublic, name, goal });
+    return res.send(updatedRoutine);
+  } else {
+    res.status(403);
+    return next({
+      name: "UnauthorizedError",
+      message: `User ${user.username} is not allowed to update ${beforeUpdate.name}`,
+      error: "UnauthorizedError"
+    });
+  }
 });
 
 // DELETE /api/routines/:routineId
@@ -80,9 +80,9 @@ router.delete('/:routineId', async (req, res, next) => {
     try {
         if (req.user.id != routine.creatorId) {
             return res.status(403).send({ 
-                error: 'UnauthorizedDeleteError',
-                name: 'NotYourRoutine',
-                message: `User ${user.username} is not allowed to delete ${routine.name}`
+                name: 'UnauthorizedDeleteError',
+                message: `User ${user.username} is not allowed to delete ${routine.name}`,
+                error: 'UnauthorizedDeleteError'
             });
         }
         const destroy = await destroyRoutine(id);

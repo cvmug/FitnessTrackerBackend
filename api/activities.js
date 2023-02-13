@@ -62,11 +62,11 @@ router.post("/", async (req, res, next) => {
 router.patch('/:activityId', async (req, res, next) => {
   const id = req.params.activityId;
   const { name, description } = req.body;
-  const activityDetails = { id: id };
+  const updateDetails = { id: id };
   const activityExist = await getActivityById(id);
 
   if (name) {
-    activityDetails.name = name;
+    updateDetails.name = name;
     if (await getActivityByName(name)) {
       next({
         name: 'ActivityExistsError',
@@ -76,7 +76,7 @@ router.patch('/:activityId', async (req, res, next) => {
     }
   }
   if (description) {
-    activityDetails.description = description;
+    updateDetails.description = description;
   }
   try {
     if (!activityExist) {
@@ -86,7 +86,7 @@ router.patch('/:activityId', async (req, res, next) => {
         error: 'ActivityNotFoundError'
       });
     } else if (activityExist) {
-      const updatedActivity = await updateActivity(activityDetails);
+      const updatedActivity = await updateActivity(updateDetails);
       res.send(updatedActivity);
     }
   } catch (error) {

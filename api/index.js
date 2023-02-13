@@ -27,13 +27,6 @@ router.use(async (req, res, next) => {
   }
 });
 
-router.use((req, res, next) => {
-  if (req.user) {
-    // console.log('User is set:', req.user);
-  }
-  next();
-});
-
 router.get('/health', (req, res) => {
   res.send({ message: 'API is healthy' });
 });
