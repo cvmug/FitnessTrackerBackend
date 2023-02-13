@@ -1,76 +1,97 @@
 const express = require('express');
 const router = express.Router();
-
-const { 
-    getAllActivities,
-    getActivityById,
-    getRoutinesByActivityId,
-    createActivity,
-    updateActivity
-  } = require('../db');
-
-// GET /api/activities
-router.get("/api/activities", async (req, res) => {
-    const activities = await createActivity();
-    res.json(activities);
-});
-
-
-// POST /api/activities
-router.post('/', async (req, res, next) => {
-    try {
-      const activity = await createActivity(req.body);
-      return res.status(201).send({
-        description: activity.description,
-        name: activity.name
-      });
-    } catch (error) {
-      if (error.message.includes("duplicate key value violates unique constraint")) {
-        return res.status(400).send({
-          error: 'An activity with the same name already exists',
-          name: req.body.name
-        });
-      } else {
-        next(error);
-      }
-    }
-  });
-  
-  router.post('/', async (req, res, next) => {
-    try {
-      const activity = await createActivity(req.body);
-      return res.status(201).send({
-        description: activity.description,
-        name: activity.name
-      });
-    } catch (error) {
-      if (error.message.includes("duplicate key value violates unique constraint")) {
-        return res.status(409).send({
-          error: "An activity with name " + req.body.name + " already exists"
-        });
-      }
-      next(error);
-    }
-  });
-  
-// PATCH /api/activities/:activityId
-router.patch('/:activityId', async (req, res, next) => {
-    try {
-      const activity = await updateActivity({
-        id: req.params.activityId,
-        ...req.body
-      });
-      if (!activity) return res.status(404).send({ 
-        error: 'Activity not found',
-        message: `Activity ${req.params.activityId} not found`,
-        name: 'ActivityNotFoundError' });
-      
-      return res.send({ activity });
-    } catch (error) {
-      next(error);
-    }
-  });
+const {
+  getAllActivities,
+  getPublicRoutinesByActivity,
+  getActivityById,
+  createActivity,
+  getActivityByName,
+  updateActivity
+} = require('../db');
 
 // GET /api/activities/:activityId/routines
+router.get('/:activityId/routines', async (req, res, next) => {
+  const activities = await getActivityById(req.params.activityId);
+  try {
+    if (!activities) {
+      next({
+        name: 'ActivityNotFoundError',
+        message: `Activity ${req.params.activityId} not found`,
+        error: 'ActivityNotFoundError'
+      });
+    }
+    if (req.params.activityId) {
+      const routines = await getPublicRoutinesByActivity({ id: req.params.activityId });
+      res.send(routines);
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/activities/
+router.get('/', async (req, res, next) => {
+  try {
+    const activities = await getAllActivities();
+    res.send(activities);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /api/activities
+router.post("/", async (req, res, next) => {
+  const activityDetails = req.body;
+  const { name } = activityDetails;
+  if (name && await getActivityByName(name)) {
+    next({
+      name: 'ActivityExistsError',
+      message: `An activity with name ${name} already exists`,
+      error: 'ActivityExistsError'
+    });
+  }
+  try {
+    const newActivity = await createActivity(activityDetails);
+    res.send(newActivity);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PATCH /api/activities/:activityId
+router.patch('/:activityId', async (req, res, next) => {
+  const id = req.params.activityId;
+  const { name, description } = req.body;
+  const activityDetails = { id: id };
+  const activityExist = await getActivityById(id);
+
+  if (name) {
+    activityDetails.name = name;
+    if (await getActivityByName(name)) {
+      next({
+        name: 'ActivityExistsError',
+        message: `An activity with name ${name} already exists`,
+        error: 'ActivityExistsError'
+      });
+    }
+  }
+  if (description) {
+    activityDetails.description = description;
+  }
+  try {
+    if (!activityExist) {
+      next({
+        name: 'ActivityNotFoundError',
+        message: `Activity ${id} not found`,
+        error: 'ActivityNotFoundError'
+      });
+    } else if (activityExist) {
+      const updatedActivity = await updateActivity(activityDetails);
+      res.send(updatedActivity);
+    }
+  } catch (error) {
+    next(error);
+}
+})
 
 module.exports = router;

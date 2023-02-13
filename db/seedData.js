@@ -1,94 +1,52 @@
-// require in the database adapter functions as you write them (createUser, createActivity...)
-// const { } = require('./');
-const client = require("./client");
-const { createUser } = require('./users');
-const { createActivity } = require('./activities');
-const { createRoutine } = require('./routines');
-const { getRoutinesWithoutActivities } = require('./routines');
-const { getAllActivities } = require('./activities');
-const { addActivityToRoutine }  = require('./routine_activities');
+const client = require("./client")
+const {
+  createUser,
+  createActivity,
+  createRoutine,
+  getRoutinesWithoutActivities,
+  getAllActivities,
+  addActivityToRoutine
+} = require('./')
 
 async function dropTables() {
-  console.log("Dropping All Tables...");
-
-  try {
-    await client.query(`DROP TABLE IF EXISTS routine_activities CASCADE`);
-    console.log("Dropped table: routine_activities");
-  } catch (error) {
-    console.error(error);
-  }
-  try {
-    await client.query(`DROP TABLE IF EXISTS routines CASCADE`);
-    console.log("Dropped table: routines");
-  } catch (error) {
-    console.error(error);
-  }
-  try {
-    await client.query(`DROP TABLE IF EXISTS activities CASCADE`);
-    console.log("Dropped table: activities");
-  } catch (error) {
-    console.error(error);
-  }
-  try {
-    await client.query(`DROP TABLE IF EXISTS users CASCADE`);
-    console.log("Dropped table: users");
-  } catch (error) {
-    console.error(error);
-  }
+  console.log("Dropping All Tables...")
+  await client.query(`
+  DROP TABLE IF EXISTS routine_activities;
+  DROP TABLE IF EXISTS routines;
+  DROP TABLE IF EXISTS users;
+  DROP TABLE IF EXISTS activities;
+  `)
 }
 
 async function createTables() {
-  console.log("Starting to build tables...");
-  try {
-    await client.query(`
-    CREATE TABLE users (
-      id SERIAL PRIMARY KEY,
-      username VARCHAR(255) UNIQUE NOT NULL,
-      password VARCHAR(255) NOT NULL
+  console.log("Starting to build tables...")
+  await client.query(`
+  CREATE TABLE users(
+    id SERIAL PRIMARY KEY,
+    username varchar(255) UNIQUE NOT NULL,
+    password varchar(255) NOT NULL
     );
-    `);
-    console.log("Created table: users");
-
-    await client.query(`
-    CREATE TABLE activities (
-      id SERIAL PRIMARY KEY,
-      name VARCHAR(255) UNIQUE NOT NULL,
-      description TEXT NOT NULL
+  CREATE TABLE activities(
+    id SERIAL PRIMARY KEY,
+    name varchar(255) UNIQUE NOT NULL,
+    description TEXT NOT NULL
     );
-    `);
-    console.log("Created table: activities");
-
-
-    await client.query(`
-    CREATE TABLE routines (
-      id SERIAL PRIMARY KEY,
-      "creatorId" INTEGER REFERENCES users(id),
-      "isPublic" BOOLEAN DEFAULT false,
-      name VARCHAR(255) UNIQUE NOT NULL,
-      goal TEXT NOT NULL
+  CREATE TABLE routines(
+    id SERIAL PRIMARY KEY,
+    "creatorId" INTEGER REFERENCES users(id),
+    "isPublic" BOOLEAN DEFAULT false,
+    name varchar(255) UNIQUE NOT NULL,
+    goal TEXT NOT NULL
     );
-    `);
-    console.log("Created table: routines");
-
-    await client.query(`
-    CREATE TABLE routine_activities (
-      id SERIAL PRIMARY KEY,
-      "routineId" INTEGER REFERENCES routines(id),
-      "activityId" INTEGER REFERENCES activities(id),
-      duration INTEGER,
-      count INTEGER,
-      UNIQUE ("routineId", "activityId")
+  CREATE TABLE routine_activities(
+    id SERIAL PRIMARY KEY,
+    "routineId" INTEGER REFERENCES routines(id),
+    "activityId" INTEGER REFERENCES activities(id),
+    duration INTEGER,
+    count INTEGER
     );
-    `);
-    console.log("Created table: routine_activities");
-  } catch (error) {
-    console.error(error);
-  }
-
-
-
+  `)
 }
-
 
 /* 
 

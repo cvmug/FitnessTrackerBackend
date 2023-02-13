@@ -1,152 +1,134 @@
-require("dotenv").config();
+/* eslint-disable no-useless-catch */
 const express = require("express");
 const router = express.Router();
+const bcrypt = require('bcrypt');
 
-const jwt = require("jsonwebtoken");
-
-const { 
+const {
     createUser,
     getUserByUsername,
-    getUserById,
-    getAllPublicRoutines,
-    getAllRoutines,
-  } = require('../db');
+    getAllRoutinesByUser,
+    getUserById
+} = require('../db');
 
-router.post("/register", async (req, res) => {
+const jwt = require('jsonwebtoken');
+
+// POST /api/users/register
+router.post('/register', async (req, res, next) => {
     const { username, password } = req.body;
-    
     try {
         const _user = await getUserByUsername(username);
         if (_user) {
-            return res.status(400).json({
-                error: 'A user by that username already exists',
+            next({
+                name: 'UserTakenError',
                 message: `User ${_user.username} is already taken.`,
-                name: 'UserExistsError',
+                error: 'UserTakenError'
             });
         }
-        
         if (password.length < 8) {
-            return res.status(400).json({
-                error: 'Password Too Short!',
-                message: 'Password Too Short!',
+            next({
                 name: 'PasswordTooShortError',
+                message: 'Password Too Short!',
+                error: 'PasswordTooShortError'
             });
         }
-        
-        const user = await createUser({ username, password });
-        
+        const user = await createUser({
+            username,
+            password
+        });
         const token = jwt.sign({
             id: user.id,
-            username,
+            username
         }, process.env.JWT_SECRET, {
-            expiresIn: '1w',
+            expiresIn: '1w'
         });
-        
-        return res.status(201).json({
-            message: 'User created successfully',
-            token,
+        res.send({
             user,
+            message: "Thank you for registering",
+            token
         });
-    
     } catch (error) {
-        return res.status(500).json({
-            error: 'Failed to create user',
-            message: error.message,
-            name: error.name,
-        });
+        next(error);
     }
 });
 
-router.post('/login', async (req, res) => {
+// POST /api/users/login
+router.post('/login', async (req, res, next) => {
     const { username, password } = req.body;
-  
     if (!username || !password) {
-      return res.status(400).json({
-        error: "Missing Credentials Error",
-        message: "Please supply both a username and password",
-        name: "MissingCredentialsError",
-      });
+        next({
+            name: "MissingCredentialsError",
+            message: "Please supply both a username and password"
+        });
     }
-  
     try {
-      const user = await getUserByUsername(username);
-  
-      if (user && user.password == password) {
-        const token = jwt.sign({ 
-          id: user.id, 
-          username
-        }, process.env.JWT_SECRET, {
-          expiresIn: '1w'
-        });
-  
-        return res.status(200).json({ 
-          message: "you're logged in!",
-          user,
-          token
-        });
-      } else {
-        return res.status(401).json({ 
-          error: 'Incorrect Credentials Error', 
-          message: 'Username or password is incorrect',
-          name: 'IncorrectCredentialsError',
-        });
-      }
-    } catch(error) {
-      return res.status(500).json({
-        error: "Server Error",
-        message: error.message,
-        name: error.name,
-      });
-    }
-  });
-
-router.get("/me", async (req, res) => {
-    try {
-        const token = req.header("Authorization").replace("Bearer ", "");
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const user = await getUserById(decoded.id);
-  
-      if (!user) {
-        return res.status(404).send({
-          error: "User not found"
-        });
-      }
-  
-      res.send(user);
+        const user = await getUserByUsername(username);
+        const isValid = await bcrypt.compare(password, user.password);
+        if (isValid) {
+            const token = jwt.sign({
+                id: user.id,
+                username
+            }, process.env.JWT_SECRET, {
+                expiresIn: '1w'
+            });
+            res.send({
+                user,
+                message: "you're logged in!",
+                token
+            });
+        } else {
+            next({
+                name: 'IncorrectCredentialsError',
+                message: 'Username or password is incorrect'
+            });
+        }
     } catch (error) {
-
-      res.status(401).send({
-        error: "Could not fetch user data",
-        message: "You must be logged in to perform this action",
-        name: "UnauthorizedError",
-      });
+        next(error);
     }
-  });
+});
 
-  
-  router.get("/api/users/:username/routines", async (req, res) => {
+// GET /api/users/me
+router.get('/me', async (req, res, next) => {
     try {
-      const username = req.params.username;
-      const user = await getUserByUsername(username);
-  
-      if (!user) {
-        return res.status(400).send({ message: "User not found." });
-      }
-  
-      let routines;
-      if (!req.user) {
-        routines = await getRoutines({ owner: user._id, visibility: "public" });
-      } else {
-        routines = await getRoutines({ owner: user._id });
-      }
-  
-      return res.status(200).send({ routines });
-    } catch (error) {
-      return res.status(500).send({ message: "Error retrieving routines." });
+        if (req.user) {
+            const {id} = req.user
+            const user = await getUserById(id); 
+            res.send(user)
+        }
+        else {
+            res.status(401);
+            next({
+                error: 'UnauthorizedError',
+                name: 'UnauthorizedError',
+                message: 'You must be logged in to perform this action'
+            });
+        }
+    } catch ( error ) {
+        next( error )
     }
-  });
-  
-  
-  
-  
+})
+
+// GET /api/users/:username/routines
+router.get('/:username/routines', async (req, res, next) => {
+    try {
+        if (req.user && (req.user.username === req.params.username)) {
+            const userRoutines = await getAllRoutinesByUser(req.params);
+            res.send(userRoutines);
+        } else if (req.params.username) {
+            const userRoutines = await getAllRoutinesByUser(req.params);
+            const publicUserRoutines = userRoutines.filter(
+                (routine) => routine.isPublic
+            );
+            res.send(publicUserRoutines);
+        } else {
+            next({
+                error: "NotAuthorized",
+                name: "UserNotFoundError",
+                message: "Could not find a user by that name."
+            });
+        }
+    } catch ( error ) {
+        next( error );
+    } 
+})
+
 module.exports = router;
